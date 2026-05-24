@@ -120,15 +120,14 @@ def render_recommendations(df):
 def main():
     df_raw = load_data()
     
-    if 'step' not in st.session_state:
-        st.session_state.step = 0
-
-    steps = ["Общая динамика", "Проблемные зоны", "Оценка вклада", "Матрица лояльности", "Моделирование", "Рекомендации"]
+    steps = ["Общая динамика", "Проблемные зоны", "Оценка рентабельности", "Матрица лояльности", "Моделирование (Up-Sell)", "Рекомендации"]
     
+    if 'current_step_name' not in st.session_state:
+        st.session_state.current_step_name = steps[0]
+
     with st.sidebar:
         st.header("Навигация")
-        step_choice = st.radio("Выберите шаг", steps, index=st.session_state.step)
-        st.session_state.step = steps.index(step_choice)
+        st.radio("Выберите шаг", steps, key="current_step_name")
         
         st.header("Фильтры")
         all_cats = df_raw['category'].unique()
@@ -140,18 +139,20 @@ def main():
     
     steps_funcs = [render_overview, render_anomaly, render_segments, render_cause, render_solution, render_recommendations]
     
-    steps_funcs[st.session_state.step](df_filtered)
+    current_index = steps.index(st.session_state.current_step_name)
+    steps_funcs[current_index](df_filtered)
 
     st.divider()
     cols = st.columns([1, 8, 1])
-    if st.session_state.step > 0:
-        if cols[0].button("Назад"):
-            st.session_state.step -= 1
-            st.rerun()
-    if st.session_state.step < len(steps) - 1:
-        if cols[2].button("Далее"):
-            st.session_state.step += 1
-            st.rerun()
+    
+    def change_step(new_step):
+        st.session_state.current_step_name = new_step
+
+    if current_index > 0:
+        cols[0].button("Назад", on_click=change_step, args=(steps[current_index - 1],))
+            
+    if current_index < len(steps) - 1:
+        cols[2].button("Далее", on_click=change_step, args=(steps[current_index + 1],))
 
 if __name__ == "__main__":
     main()
